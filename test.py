@@ -1,6 +1,8 @@
 import os
 from alpaca_trade_api.rest import REST
 import time
+from threading import Thread
+from flask import Flask
 
 ALPACA_KEY = os.getenv("ALPACA_KEY")
 ALPACA_SECRET = os.getenv("ALPACA_SECRET")
@@ -8,27 +10,25 @@ BASE_URL = "https://paper-api.alpaca.markets"
 
 api = REST(ALPACA_KEY, ALPACA_SECRET, base_url=BASE_URL)
 
-def test_place_order(symbol, signal):
-    try:
-        account = api.get_account()
-        print("account status:", account.status)
-        print("trading blocked:", account.trading_blocked)
+app = Flask(__name__)
 
-        if account.status != "ACTIVE" or account.trading_blocked:
-            print("cannot trade")
-            return
+def trade_loop():
+    while True:
+        try:
+            account = api.get_account()
+            if account.status == "ACTIVE" and not account.trading_blocked:
+                qty = 1
+                print(f"would buy {qty} share of AAPL")
+                # api.submit_order(symbol="AAPL", qty=qty, side='buy', type='market', time_in_force='day')
+        except Exception as e:
+            print("error:", e)
+        time.sleep(60)
 
-        # buy exactly 1 share for testing
-        qty = 1
-        price = 10  # just for printing
-        print(f"would buy {qty} share of {symbol} at ~{price}")
-        # uncomment next line to actually place order
-        # api.submit_order(symbol=symbol, qty=qty, side='buy', type='market', time_in_force='day')
+@app.route("/")
+def home():
+    return "Trading bot running"
 
-    except Exception as e:
-        print("test_place_order error:", e)
-
-# ===== main loop =====
-while True:
-    test_place_order("AAPL", "BUY")
-    time.sleep(60)  # wait 1 min before running again
+if __name__ == "__main__":
+    Thread(target=trade_loop, daemon=True).start()  # start the bot in background
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
