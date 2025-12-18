@@ -18,21 +18,17 @@ def test_place_order(symbol, signal):
             print("cannot trade")
             return
 
-        # simple test: only BUY for testing
-        buying_power = float(account.cash)
-        position_size = buying_power * 0.01  # tiny amount for test
-        price = 10  # fake price for test, just to get qty
-        qty = int(position_size // price)
-        if qty < 1:
-            qty = 1
-
-        print(f"would buy {qty} shares of {symbol} at ~{price}")
+        # buy exactly 1 share for testing
+        qty = 1
+        price = 10  # just for printing
+        print(f"would buy {qty} share of {symbol} at ~{price}")
         # uncomment next line to actually place order
         # api.submit_order(symbol=symbol, qty=qty, side='buy', type='market', time_in_force='day')
 
     except Exception as e:
         print("test_place_order error:", e)
 
-
-# TEST
-test_place_order("AAPL", "BUY")
+# ===== main loop =====
+while True:
+    test_place_order("AAPL", "BUY")
+    time.sleep(60)  # wait 1 min before running again
