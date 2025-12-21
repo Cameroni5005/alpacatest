@@ -6,15 +6,13 @@ from flask import Flask
 from alpaca_trade_api.rest import REST, APIError
 
 # ----------------------------
-# Logging setup (Render-safe)
+# Logging setup
 # ----------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
-
 log = logging.getLogger(__name__)
-
 log.info("=== APP MODULE LOADED ===")
 
 # ----------------------------
@@ -44,10 +42,10 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Trading bot running. Check Render logs for details."
+    return "Trading bot running. Check logs for details."
 
 # ----------------------------
-# Trading loop
+# Trading loop (buys 1 AAPL every cycle)
 # ----------------------------
 def trade_loop():
     log.info("Trade loop started")
@@ -71,34 +69,26 @@ def trade_loop():
             log.info("Day trades: %s", account.daytrade_count)
             log.info("PDT status: %s", account.pattern_day_trader)
 
-            # Market clock
-            clock = api.get_clock()
-            log.info("Market open: %s", clock.is_open)
-            log.info("Next open: %s", clock.next_open)
-            log.info("Next close: %s", clock.next_close)
-
             # Safety checks
             if account.status != "ACTIVE":
                 log.warning("Account not ACTIVE — skipping trade")
             elif account.trading_blocked:
                 log.warning("Trading is blocked — skipping trade")
-            elif not clock.is_open:
-                log.info("Market is closed — skipping trade")
             else:
                 qty = 1
-                log.info("Trade conditions OK")
-                log.info("Would submit BUY order: AAPL qty=%s", qty)
-
-                # 🚨 Uncomment ONLY when ready to trade
-                # api.submit_order(
-                #     symbol="AAPL",
-                #     qty=qty,
-                #     side="buy",
-                #     type="market",
-                #     time_in_force="day"
-                # )
-
-                log.info("Order logic completed (submit_order commented)")
+                try:
+                    order = api.submit_order(
+                        symbol="AAPL",
+                        qty=qty,
+                        side="buy",
+                        type="market",
+                        time_in_force="day"
+                    )
+                    log.info("✅ Successfully submitted BUY order: AAPL qty=%s", qty)
+                except APIError as e:
+                    log.error("❌ Alpaca APIError submitting order: %s", e)
+                except Exception as e:
+                    log.exception("❌ Unexpected error submitting order: %s", e)
 
         except APIError as api_err:
             log.error("Alpaca APIError: %s", api_err)
